@@ -1,0 +1,25 @@
+name: falso
+description: Ball Bounce Blitz - Arcade Game
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.18.0
+  flame_audio: ^2.10.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+assets:
+  - assets/images/
+  - assets/audio/
+
+flutter:
+  uses-material-design: true
