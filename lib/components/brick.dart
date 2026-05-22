@@ -25,10 +25,9 @@ class Brick extends PositionComponent with CollisionCallbacks {
     super.onCollision(intersectionPoints, other);
     if (other is Ball) {
       final game = findGame()! as BallBounceBlitz;
-      game.score += points;
-      game.bricks.remove(this);
-      removeFromParent();
-      
+      game._onBrickDestroyed(this);
+
+      // Bounce ball
       if (intersectionPoints.length >= 2) {
         final p1 = intersectionPoints.elementAt(0);
         final p2 = intersectionPoints.elementAt(1);
@@ -44,18 +43,31 @@ class Brick extends PositionComponent with CollisionCallbacks {
   @override
   void render(Canvas canvas) {
     final rect = Rect.fromLTWH(0, 0, size.x, size.y);
+
+    // Base color
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(4)),
       Paint()..color = color,
     );
+
+    // Highlight gradient
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(4)),
       Paint()
-        ..shader = LinearGradient(
+        ..shader = const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Colors.white.withOpacity(0.3), Colors.transparent],
+          colors: [Color(0x55FFFFFF), Color(0x00000000)],
         ).createShader(rect),
+    );
+
+    // Border
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(rect, const Radius.circular(4)),
+      Paint()
+        ..color = Colors.white.withOpacity(0.2)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
     );
   }
 }
