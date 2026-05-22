@@ -7,6 +7,7 @@ import 'components/brick.dart';
 import 'components/enemy.dart';
 import 'components/power_up.dart';
 import 'components/particle.dart';
+import 'components/score_popup.dart';
 import 'systems/score_manager.dart';
 import 'systems/level_manager.dart';
 
@@ -27,6 +28,7 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
   bool isGameOver = false;
   bool isPaused = false;
   double screenShake = 0;
+  int comboCount = 0;
 
   @override
   Future<void> onLoad() async {
@@ -61,11 +63,15 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
 
     for (int r = 0; r < rows; r++) {
       for (int c = 0; c < cols; c++) {
+        // Every 7th brick is hard
+        final isHard = _random.nextDouble() < 0.15;
         final brick = Brick(
           position: Vector2(20 + c * brickWidth, 60 + r * brickHeight),
           size: Vector2(brickWidth - 4, brickHeight),
           color: _getBrickColor(r),
           points: (rows - r) * 10,
+          hits: isHard ? 2 : 1,
+          isHard: isHard,
         );
         bricks.add(brick);
         add(brick);
@@ -111,10 +117,19 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
   void _onBrickDestroyed(Brick brick) {
     particleEmitter.emitBurst(brick.position + brick.size / 2, brick.color, count: 15);
     _spawnPowerUp(brick.position + brick.size / 2);
+    
+    // Score popup
+    final popup = ScorePopup(
+      position: brick.position + brick.size / 2,
+      score: brick.points * scoreManager.multiplier,
+    );
+    add(popup);
+    
     bricks.remove(brick);
     remove(brick);
     score += brick.points * scoreManager.multiplier;
     scoreManager.addScore(brick.points);
+    comboCount++;
 
     if (bricks.isEmpty) {
       nextLevel();
@@ -123,6 +138,7 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
 
   void _onBallLost() {
     screenShake = 0.3;
+    comboCount = 0;
     lives--;
     if (lives <= 0) {
       isGameOver = true;
@@ -145,10 +161,11 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
     lives = 3;
     level = 1;
     isGameOver = false;
+    comboCount = 0;
     scoreManager.reset();
     levelManager.reset();
     removeAll(children.where((c) =>
-        c is Ball || c is Brick || c is Enemy || c is PowerUp || c is Particle));
+        c is Ball || c is Brick || c is Enemy || c is PowerUp || c is Particle || c is ScorePopup));
     bricks.clear();
     enemies.clear();
     powerUps.clear();
@@ -181,7 +198,7 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
     super.update(dt);
     if (isPaused || isGameOver) return;
     scoreManager.update(dt);
-
+    
     // Decay screen shake
     if (screenShake > 0) {
       screenShake -= dt;
@@ -226,9 +243,15 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
   void _renderUI(Canvas canvas) {
     final textPainter = TextPainter(textDirection: TextDirection.ltr);
 
-    // Top bar
+    // Top bar background
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.x, 35),
+      Paint()..color = Colors.black.withOpacity(0.3),
+    );
+
+    // Score & Info
     textPainter.text = TextSpan(
-      text: '▶ Score: $score  |  ❤ Lives: $lives  |  ⭐ Level: $level',
+      text: '▶ $score  |  ❤ $lives  |  ⭐ Level $level',
       style: const TextStyle(
         color: Colors.white,
         fontSize: 14,
@@ -239,19 +262,39 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
     textPainter.layout();
     textPainter.paint(canvas, const Offset(12, 10));
 
-    // Multiplier indicator
-    if (scoreManager.multiplier > 1) {
+    // Multiplier & Combo
+    if (scoreManager.multiplier > 1 || comboCount > 3) {
+      String comboText = comboCount > 5 ? '🔥 COMBO x$comboCount!' : 'x${scoreManager.multiplier} MULTI!';
+      if (comboCount > 10) {
+        comboText = '🔥 BLAZING x$comboCount!';
+      }
+      
       textPainter.text = TextSpan(
-        text: 'x${scoreManager.multiplier} COMBO!',
+        text: comboText,
         style: TextStyle(
-          color: const Color(0xFFFFE66D),
+          color: comboCount > 10 ? const Color(0xFFFF6B6B) : const Color(0xFFFFE66D),
           fontSize: 18,
           fontWeight: FontWeight.bold,
           shadows: const [Shadow(color: Colors.orange, blurRadius: 10)],
         ),
       );
       textPainter.layout();
-      textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, 10));
+      textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, 50));
+    }
+
+    // Bottom hint
+    if (!ball.isLaunched) {
+      textPainter.text = const TextSpan(
+        text: 'TAP TO LAUNCH',
+        style: TextStyle(
+          color: Color(0xFF00D9FF),
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 2,
+        ),
+      );
+      textPainter.layout();
+      textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y - 60));
     }
 
     if (isGameOver) {
@@ -273,14 +316,14 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
       textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y / 2 - 60));
 
       textPainter.text = TextSpan(
-        text: 'Final Score: $score',
+        text: 'Score: $score  |  Level: $level',
         style: const TextStyle(color: Colors.white, fontSize: 24),
       );
       textPainter.layout();
       textPainter.paint(canvas, Offset(size.x / 2 - textPainter.width / 2, size.y / 2));
 
       textPainter.text = const TextSpan(
-        text: 'Tap to Restart',
+        text: 'TAP TO RESTART',
         style: TextStyle(color: Color(0xFF00D9FF), fontSize: 18),
       );
       textPainter.layout();

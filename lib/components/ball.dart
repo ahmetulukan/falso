@@ -1,7 +1,59 @@
 import 'dart:math';
 import 'package:flame/components.dart';
-import 'package:flame/events.dart';
 import 'components/paddle.dart';
+
+class BallTrail extends PositionComponent {
+  final Ball ball;
+  final int trailLength;
+  final List<Vector2> positions = [];
+  final Random _random = Random();
+
+  BallTrail({required this.ball, this.trailLength = 8});
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    if (ball.isLaunched) {
+      positions.insert(0, ball.position.clone());
+      if (positions.length > trailLength) {
+        positions.removeLast();
+      }
+    }
+  }
+
+  @override
+  void render(Canvas canvas) {
+    if (positions.isEmpty) return;
+    
+    for (int i = positions.length - 1; i >= 0; i--) {
+      final pos = positions[i];
+      final alpha = (1 - i / trailLength) * 0.6;
+      final radius = 10 * (1 - i / trailLength);
+      
+      // Neon glow effect
+      final gradient = RadialGradient(
+        colors: [
+          const Color(0xFF00D9FF).withOpacity(alpha),
+          const Color(0xFF00D9FF).withOpacity(alpha * 0.3),
+          Color(0x00000000),
+        ],
+        stops: const [0.0, 0.5, 1.0],
+      );
+      
+      final rect = Rect.fromCircle(center: pos, radius: radius + 4);
+      canvas.drawCircle(
+        pos,
+        radius + 4,
+        Paint()..shader = gradient.createShader(rect),
+      );
+      canvas.drawCircle(
+        pos,
+        radius,
+        Paint()..color = const Color(0xFF00D9FF).withOpacity(alpha),
+      );
+    }
+  }
+}
 
 class Ball extends PositionComponent with HasGameRef, TapCallbacks {
   final Paddle paddle;

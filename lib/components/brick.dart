@@ -1,5 +1,5 @@
+import 'dart:math';
 import 'package:flame/collisions.dart';
-import 'package:flutter/material.dart';
 import 'package:flame/components.dart';
 import '../game/ball_bounce_blitz.dart';
 import 'ball.dart';
@@ -7,12 +7,16 @@ import 'ball.dart';
 class Brick extends PositionComponent with CollisionCallbacks {
   final int points;
   final Color color;
+  int hits;
+  final bool isHard;
 
   Brick({
     required Vector2 position,
     required Vector2 size,
     required this.color,
     required this.points,
+    this.hits = 1,
+    this.isHard = false,
   }) : super(position: position, size: size);
 
   @override
@@ -25,6 +29,15 @@ class Brick extends PositionComponent with CollisionCallbacks {
     super.onCollision(intersectionPoints, other);
     if (other is Ball) {
       final game = findGame()! as BallBounceBlitz;
+      
+      if (isHard) {
+        hits--;
+        if (hits > 0) {
+          // Flash effect
+          return;
+        }
+      }
+      
       game._onBrickDestroyed(this);
 
       // Bounce ball
@@ -45,10 +58,25 @@ class Brick extends PositionComponent with CollisionCallbacks {
     final rect = Rect.fromLTWH(0, 0, size.x, size.y);
 
     // Base color
+    final baseColor = isHard && hits > 0 ? color.withOpacity(0.5) : color;
     canvas.drawRRect(
       RRect.fromRectAndRadius(rect, const Radius.circular(4)),
-      Paint()..color = color,
+      Paint()..color = baseColor,
     );
+
+    // Hard brick crack pattern
+    if (isHard && hits > 0) {
+      canvas.drawLine(
+        Offset(size.x * 0.3, 0),
+        Offset(size.x * 0.5, size.y),
+        Paint()..color = Colors.black.withOpacity(0.4)..strokeWidth = 2,
+      );
+      canvas.drawLine(
+        Offset(size.x * 0.7, 0),
+        Offset(size.x * 0.4, size.y),
+        Paint()..color = Colors.black.withOpacity(0.3)..strokeWidth = 2,
+      );
+    }
 
     // Highlight gradient
     canvas.drawRRect(
@@ -67,7 +95,7 @@ class Brick extends PositionComponent with CollisionCallbacks {
       Paint()
         ..color = Colors.white.withOpacity(0.2)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1,
+        ..strokeWidth = isHard ? 2 : 1,
     );
   }
 }
