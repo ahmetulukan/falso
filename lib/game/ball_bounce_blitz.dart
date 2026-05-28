@@ -8,6 +8,7 @@ import 'components/enemy.dart';
 import 'components/power_up.dart';
 import 'components/particle.dart';
 import 'components/score_popup.dart';
+import 'components/shield.dart';
 import 'systems/score_manager.dart';
 import 'systems/level_manager.dart';
 
@@ -17,6 +18,7 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
   final List<Brick> bricks = [];
   final List<Enemy> enemies = [];
   final List<PowerUp> powerUps = [];
+  final List<ShieldBarrier> shields = [];
   final ScoreManager scoreManager = ScoreManager();
   final LevelManager levelManager = LevelManager();
   final Random _random = Random();
@@ -41,6 +43,7 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
     bricks.clear();
     enemies.clear();
     powerUps.clear();
+    shields.clear();
 
     paddle = Paddle();
     paddle.anchor = Anchor.bottomCenter;
@@ -165,10 +168,11 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
     scoreManager.reset();
     levelManager.reset();
     removeAll(children.where((c) =>
-        c is Ball || c is Brick || c is Enemy || c is PowerUp || c is Particle || c is ScorePopup));
+        c is Ball || c is Brick || c is Enemy || c is PowerUp || c is Particle || c is ScorePopup || c is ShieldBarrier || c is LightningBolt || c is MagnetField));
     bricks.clear();
     enemies.clear();
     powerUps.clear();
+    shields.clear();
     paddle.size.x = 100;
     _initLevel();
   }
@@ -178,10 +182,11 @@ class BallBounceBlitz extends FlameGame with TapEvents, HasCollisionDetection {
     levelManager.levelUp();
     paddle.size.x = (paddle.size.x * 0.9).clamp(60, 180);
     ball.speed = (ball.speed + 20).clamp(250, 600);
-    removeAll(children.where((c) => c is Ball || c is Brick || c is Enemy || c is PowerUp));
+    removeAll(children.where((c) => c is Ball || c is Brick || c is Enemy || c is PowerUp || c is ShieldBarrier || c is LightningBolt || c is MagnetField));
     bricks.clear();
     enemies.clear();
     powerUps.clear();
+    shields.clear();
 
     ball = Ball(paddle: paddle);
     ball.position = Vector2(size.x / 2, size.y - 60);

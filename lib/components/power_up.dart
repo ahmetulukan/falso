@@ -5,8 +5,9 @@ import 'package:flame/components.dart';
 import '../game/ball_bounce_blitz.dart';
 import 'ball.dart';
 import 'paddle.dart';
+import 'shield.dart';
 
-enum PowerUpType { expandPaddle, shrinkBall, multiBall, slowMotion, extraLife }
+enum PowerUpType { expandPaddle, shrinkBall, multiBall, slowMotion, extraLife, shield, lightning, magnet }
 
 class PowerUp extends PositionComponent with CollisionCallbacks {
   final PowerUpType type;
@@ -19,6 +20,9 @@ class PowerUp extends PositionComponent with CollisionCallbacks {
     PowerUpType.multiBall: const Color(0xFF4ECDC4),
     PowerUpType.slowMotion: const Color(0xFFFFE66D),
     PowerUpType.extraLife: const Color(0xFFFF88DC),
+    PowerUpType.shield: const Color(0xFF00FFFF),
+    PowerUpType.lightning: const Color(0xFFFFEE00),
+    PowerUpType.magnet: const Color(0xFFFF44AA),
   };
 
   static final _labels = {
@@ -27,6 +31,9 @@ class PowerUp extends PositionComponent with CollisionCallbacks {
     PowerUpType.multiBall: '✦',
     PowerUpType.slowMotion: '⏱',
     PowerUpType.extraLife: '❤',
+    PowerUpType.shield: '🛡',
+    PowerUpType.lightning: '⚡',
+    PowerUpType.magnet: '🧲',
   };
 
   PowerUp({required Vector2 position})
@@ -85,6 +92,30 @@ class PowerUp extends PositionComponent with CollisionCallbacks {
       case PowerUpType.extraLife:
         game.lives = (game.lives + 1).clamp(1, 5);
         break;
+      case PowerUpType.shield:
+        final shield = ShieldBarrier();
+        game.add(shield);
+        break;
+      case PowerUpType.lightning:
+        final enemies = game.enemies.toList();
+        if (enemies.isNotEmpty) {
+          final target = enemies[_random.nextInt(enemies.length)].position;
+          final bolt = LightningBolt(start: game.ball.position.clone(), targetPosition: target);
+          game.add(bolt);
+        } else {
+          // If no enemies, strike random position
+          final randomPos = Vector2(
+            _random.nextDouble() * game.size.x,
+            _random.nextDouble() * 200 + 50,
+          );
+          final bolt = LightningBolt(start: game.ball.position.clone(), targetPosition: randomPos);
+          game.add(bolt);
+        }
+        break;
+      case PowerUpType.magnet:
+        final magnet = MagnetField();
+        game.add(magnet);
+        break;
     }
   }
 
@@ -93,6 +124,13 @@ class PowerUp extends PositionComponent with CollisionCallbacks {
     final color = _colors[type]!;
     final label = _labels[type]!;
 
+    // Glow effect
+    canvas.drawCircle(
+      Offset(size.x / 2, size.y / 2),
+      size.x / 2 + 4,
+      Paint()..color = color.withOpacity(0.4)..maskFilter = const MaskFilter.blur(BlurStyle.outer, 6),
+    );
+    
     canvas.drawCircle(
       Offset(size.x / 2, size.y / 2),
       size.x / 2,
